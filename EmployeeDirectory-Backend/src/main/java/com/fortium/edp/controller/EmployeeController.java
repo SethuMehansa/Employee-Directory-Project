@@ -2,12 +2,16 @@ package com.fortium.edp.controller;
 
 import com.fortium.edp.dto.Employee;
 import com.fortium.edp.service.EmployeeService;
+import com.opencsv.CSVWriter;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @CrossOrigin
@@ -53,4 +57,31 @@ public class EmployeeController {
         employeeService.deleteEmployee(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping(value = "/export", produces = "text/csv")
+    public void exportCsv(HttpServletResponse response) throws IOException {
+
+        response.setHeader("Content-Disposition", "attachment; filename=\"employees.csv\"");
+        response.setContentType("text/csv");
+
+        try (CSVWriter writer = new CSVWriter(response.getWriter())) {
+            writer.writeNext(new String[]{
+                    "ID", "Name", "Email", "Department", "Created At", "Updated At"
+            });
+
+            DateTimeFormatter fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+            employeeService.getAllEmployees().forEach(dto ->
+                    writer.writeNext(new String[]{
+                            dto.getId() != null ? dto.getId().toString() : "",
+                            dto.getName(),
+                            dto.getEmail(),
+                            dto.getDepartment(),
+                            dto.getCreatedAt() != null ? fmt.format(dto.getCreatedAt()) : "",
+                            dto.getUpdatedAt() != null ? fmt.format(dto.getUpdatedAt()) : ""
+                    })
+            );
+
+        }
+    }
+
 }
